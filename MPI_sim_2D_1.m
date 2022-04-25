@@ -1,6 +1,6 @@
 function [out_x,out_y] = MPI_sim_2D_1(H_x,H_y,f_s,phantom)
-%% 不区分维度的无弛豫MPI仿真函数
-%%
+%% 二维无弛豫MPI仿真函数（由MPI_sim_2D_2调用）
+%% 
 % 李蕾 2022年04月19日
 % 二维MPI仿真程序，修改自一维
 % 建立一个矩阵，一行数据是在相同时间不同位置下的H
@@ -123,8 +123,32 @@ parameter_M_H.S = S;
 % 粒子磁矩，H_x和H_y是行为位置，列为时间的矩阵，矩阵中存储外加磁场大小
 % 首先将两个方向合成一个方向
 H = (H_x.^2+H_y.^2).^0.5;
+%按照仿体稀疏性加速，实测这儿只能加速2s左右
+%取出仿体的一行（实际每行都是一样的）
+phantom_single = phantom(1,:);
+%找出为0的位置
+phantom_num_zero = find(phantom_single==0);
+%找出非0的位置
+phantom_num_not_zero = find(phantom_single~=0);
+%准备裁剪的仿体矩阵
+phantom_not_zero = phantom;
+%准备裁剪的外磁场矩阵
+H_not_zero = H;
+%将仿体0的位置置空，即不需要计算
+phantom_not_zero(:,phantom_num_zero)=[];
+%将外磁场为0的位置置空，即不需要计算
+H_not_zero(:,phantom_num_zero)=[];
+%准备一个矩阵准备记录M_p
+M_p_total = zeros(size(H));
 % MPI仿真，按照郎之万模型
-M_p = M_H(parameter_M_H,H,phantom);
+
+M_p_not_zero = M_H(parameter_M_H,H_not_zero,phantom_not_zero);
+%补足之前的零位置
+M_p_total(:,phantom_num_zero) = 0;
+%补足非0位置
+
+M_p_total(:,phantom_num_not_zero) = M_p_not_zero;
+M_p = M_p_total;
 % 将M分解为X和Y两个方向，因为接收线圈只能接收一个方向
 M_p_x = M_p.*H_x./H;
 M_p_y = M_p.*H_y./H;
