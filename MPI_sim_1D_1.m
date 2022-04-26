@@ -1,5 +1,5 @@
 function out = MPI_sim_1D_1(H,f_s,phantom)
-%% 不区分维度的无弛豫MPI仿真函数
+%% 一维无弛豫MPI仿真函数
 %%
 % 李蕾 2022年04月19日
 % 二维MPI仿真程序，修改自一维
@@ -20,9 +20,8 @@ VT = 0.2;
 %溶液铁浓度，单位mg/mL
 n_Fe = 25;
 
-
 %弛豫时间 （微秒）
-relaxation_time = 1;
+relaxation_time = 0;
 
 %% 第二部分，默认参数
 %真空磁导率
@@ -127,12 +126,23 @@ parameter_M_H.S = S;
 %% （2）仿真
 % 粒子磁矩（若有磁粒子下的单位磁矩）
 M_p = M_H(parameter_M_H,H,phantom);
-
+% 空间位置求和
 M_p = sum(M_p');
 
+% 弛豫
+if relaxation_time~=0
+    sample_point = floor(4*relaxation_time*f_s);
+    t = (1:sample_point)/f_s;
+    r = exp(-t/relaxation_time);
+    r = r./sum(r);
+    %策略1 先弛豫卷积再求导
+     M_p_r = conv(M_p,r);
+     M_p_r = M_p_r(1:size(M_p_r,2));
+end
+M_p_r=M_p;
 %磁矩求导，接收的信号
-M_p_d = [M_p(2:end),M_p(end)]-M_p;
-M_p_d = M_p_d/(1/f_s);
+M_p_d_r = [M_p_r(2:end),M_p_r(end)]-M_p_r;
+M_p_d_r = M_p_d_r/(1/f_s);
 
 
 
@@ -142,7 +152,7 @@ M_p_d = M_p_d/(1/f_s);
 % M_p_d_3 = M_p_d;
 % M_p_d_3 = M_p_d_3(round(t*f_s+1):round(2*t*f_s));
 % M_p_d= downsample(M_p_d_3,10);
-out = M_p_d;
+out = M_p_d_r;
 
 %% 函数
 function out = M_H(parameter,in,phantom)
