@@ -149,6 +149,9 @@ M_p_total(:,phantom_num_zero) = 0;
 
 M_p_total(:,phantom_num_not_zero) = M_p_not_zero;
 M_p = M_p_total;
+
+
+
 % 将M分解为X和Y两个方向，因为接收线圈只能接收一个方向
 M_p_x = M_p.*H_x./H;
 M_p_y = M_p.*H_y./H;
@@ -160,7 +163,19 @@ M_p_y(isnan(M_p_y))=0;
 % 将空间维度累加，因为接收线圈并不能区分不同位置的信号
 M_p_x = sum(M_p_x');
 M_p_y = sum(M_p_y');
-
+%弛豫
+if relaxation_time~=0
+    sample_point = floor(4*relaxation_time*f_s);
+    t = (1:sample_point)/f_s;
+    r = exp(-t/relaxation_time);
+    r = r./sum(r);
+    %策略1 先弛豫卷积再求导
+    M_p_r = conv(M_p_x,r);
+    M_p_x = M_p_r(1:size(M_p_r,2));
+    
+    M_p_r = conv(M_p_y,r);
+    M_p_y = M_p_r(1:size(M_p_r,2));
+end
 %磁矩求导，接收的信号，求导后即输出
 M_p_d_x = [M_p_x(2:end),M_p_x(end)]-M_p_x;
 M_p_d_x = M_p_d_x/(1/f_s);
