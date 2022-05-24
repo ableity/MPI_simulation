@@ -1,32 +1,50 @@
-function [ x ] = kaczmarzReg2(A,b,iterations,lambd,shuff,enforceReal,enforcePositive)
-%scale down the identity matrix
-%     [m,n] = size(A);
-%     energy = rowEnergy(A);
-%     lambdZero = sum(energy.^2)/m;
-%     lambdIter = lambd*lambdZero;
-%     lambdIter = lambd;
+function [ x ] = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositive )
+% 20220520 lilei
+% Ax=b,
+% shuff：whether to use the randomized Kaczmarz
+
+% initialization of the variable
+% A has n rows and m columns
+
+[N, M] = size(A);
+
+x = complex(zeros(N,1)); 
+
+rowIndexCycle = 1:M;
+
+% calculate the energy of each frequency component
 % 
-%     A_plus = (lambdIter)*ones(1,m);
-%     A_plus = diag(A_plus);
-%     b_plus = zeros(m,1);
-% 
-%     A = [A A_plus];
-%     b = [b;b_plus];
-%     x = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositive );
+% Calculate the inner product of itself and sum by columnxian
+energy = rowEnergy(A);
+
+% may use a randomized Kaczmarz
+if shuff
+    rowIndexCycle = randperm(M);
+end
+
+% estimate regularization parameter
+
+for l = 1:iterations
+    for m = 1:M
+        k = rowIndexCycle(m);
+        
+        if energy(k) > 0
+            tmp = A(:,k).'*x;
+            beta = (b(k) - tmp ) / (energy(k)^2 );
+            x = x + beta*conj(A(:,k));
+        end
+    end
     
-%scale right the identity matrix
-    [m,n] = size(A);
-    energy = rowEnergy(A);
-    lambdZero = sum(energy.^2)/m;
-    lambdIter = lambd*lambdZero;
+    
+    if enforceReal && ~isreal(x)
+        x = complex(real(x),0);
+    end
+    
+    if enforcePositive
+        x(real(x) < 0) = 0;
+    end
+end
 
-
-    A_plus = ((lambdIter)^0.5)*ones(1,n);
-    A_plus = diag(A_plus);
-
-    A = [A;A_plus];
-    x = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositive );
-    x = x(1:m);
 
  function [ energy ] = rowEnergy(A)		
  % Calculate the norm of each row of the input		
@@ -36,5 +54,6 @@ function [ x ] = kaczmarzReg2(A,b,iterations,lambd,shuff,enforceReal,enforcePosi
  energy = sqrt(sum(abs(A.*A),1));		
  		
  end		
+
 
 end
