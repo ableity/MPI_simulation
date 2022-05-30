@@ -1,5 +1,5 @@
 function [out_x,out_y]=MPI_sim_2D_2(img)
-%% 二维无弛豫MPI仿真函数（调用MPI_sim_2D_1）
+%% 二维有弛豫MPI仿真函数（调用MPI_sim_2D_1）
 %采样频率
 f_s_raw = 1250000;
 %采样时间
