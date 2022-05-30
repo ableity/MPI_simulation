@@ -1,5 +1,5 @@
 function out = MPI_sim_1D_1(H,f_s,phantom)
-%% 一维无弛豫MPI仿真函数
+%% 一维弛豫MPI仿真函数
 %%
 % 李蕾 2022年04月19日
 % 二维MPI仿真程序，修改自一维
@@ -137,9 +137,11 @@ if relaxation_time~=0
     r = r./sum(r);
     %策略1 先弛豫卷积再求导
      M_p_r = conv(M_p,r);
-     M_p_r = M_p_r(1:size(M_p_r,2));
+     M_p_r = M_p_r(1:size(M_p,2));
+else
+    M_p_r=M_p;
 end
-M_p_r=M_p;
+
 %磁矩求导，接收的信号
 M_p_d_r = [M_p_r(2:end),M_p_r(end)]-M_p_r;
 M_p_d_r = M_p_d_r/(1/f_s);
