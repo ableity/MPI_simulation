@@ -8,6 +8,8 @@ function [ x ] = kaczmarzReg( A,b,iterations,lambd,shuff,enforceReal,enforcePosi
 % or
 % From Dax A 1993: On row relaxation methods for large constrained 
 % least squares problems
+% A has n rows and m columns（n * m）
+% b must be 1 * m, m * 1 will cause a wrong answer
 
 % initialization of the variable
 [N, M] = size(A);
