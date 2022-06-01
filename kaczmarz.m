@@ -4,7 +4,8 @@ function [ x ] = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositiv
 % shuff：whether to use the randomized Kaczmarz
 
 % initialization of the variable
-% A has n rows and m columns
+% A has n rows and m columns（n * m）
+% b must be 1 * m, m * 1 will cause a wrong answer
 
 [N, M] = size(A);
 
