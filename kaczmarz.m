@@ -1,4 +1,4 @@
-function [ x ] = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositive )
+function [ x ] = kaczmarz( A,b,iterations,lambd,corr_lambd,shuff,enforceReal,enforcePositive )
 % 20220520 lilei
 % Ax=b,
 % shuff：whether to use the randomized Kaczmarz
@@ -32,7 +32,7 @@ for l = 1:iterations
         if energy(k) > 0
             tmp = A(:,k).'*x;
             beta = (b(k) - tmp ) / (energy(k)^2 );
-            x = x + beta*conj(A(:,k));
+            x = x + corr_lambd*beta*conj(A(:,k));
         end
     end
     
