@@ -1,4 +1,4 @@
-function [ x ] = kaczmarzReg2(A,b,iterations,lambd,shuff,enforceReal,enforcePositive)
+function [ x ] = kaczmarzReg2(A,b,iterations,lambd,corr_lambd,shuff,enforceReal,enforcePositive)
 % A has n rows and m columns（n * m）
 % b must be 1 * m, m * 1 will cause a wrong answer
  [m,n] = size(A);
@@ -11,7 +11,7 @@ function [ x ] = kaczmarzReg2(A,b,iterations,lambd,shuff,enforceReal,enforcePosi
     A_plus = diag(A_plus);
 
     A = [A;A_plus];
-    x = kaczmarz( A,b,iterations,lambd,shuff,enforceReal,enforcePositive );
+    x = kaczmarz( A,b,iterations,lambd,corr_lambd,shuff,enforceReal,enforcePositive );
     x = x(1:m);
     
     function [ energy ] = rowEnergy(A)
