@@ -1,5 +1,5 @@
 function img = Upsimpleimage(img)
-%和
+%和read_and_reconstruction_mpi一起使用
     [PixelNumx,PixelNumy] = size(img);
     nearpixel = zeros(8,1);
     
