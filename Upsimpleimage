@@ -1,0 +1,68 @@
+function img = Upsimpleimage(img)
+%和
+    [PixelNumx,PixelNumy] = size(img);
+    nearpixel = zeros(8,1);
+    
+    imgsample = zeros(size(img));
+
+    for i = 1:PixelNumx
+        for j = 1:PixelNumy
+            if img(i,j)==0
+                if i>1 && i<PixelNumx && j>1 && j<PixelNumy
+                   nearpixel(1) = img(i-1,j-1);
+                   nearpixel(2) = img(i-1,j);
+                   nearpixel(3) = img(i-1,j+1);
+                   nearpixel(4) = img(i,j-1);
+                   nearpixel(5) = img(i,j+1);
+                   nearpixel(6) = img(i+1,j-1);
+                   nearpixel(7) = img(i+1,j);
+                   nearpixel(8) = img(i+1,j+1);
+                   if sum(nearpixel~=0)>0
+                        imgsample(i,j) = sum(sum(nearpixel))/sum(nearpixel~=0);
+                        nearpixel = zeros(8,1);
+                   end
+
+                else
+                    if i>1 && j>1
+                        nearpixel(1) = img(i-1,j-1);
+                    end
+
+                    if i>1
+                        nearpixel(2) = img(i-1,j);
+                    end
+
+                    if i>1 && j<PixelNumy
+                        nearpixel(3) = img(i-1,j+1);
+                    end
+
+                    if  j>1
+                        nearpixel(4) = img(i,j-1);
+                    end
+
+                    if j<PixelNumy
+                        nearpixel(5) = img(i,j+1);
+                    end
+
+                    if i<PixelNumx && j>1
+                        nearpixel(6) = img(i+1,j-1);
+                    end
+
+                    if i<PixelNumx
+                        nearpixel(7) = img(i+1,j);
+                    end
+
+                    if i<PixelNumx && j<PixelNumy
+                        nearpixel(8) = img(i+1,j+1);
+                    end
+                    if sum(nearpixel~=0)>0
+                        imgsample(i,j) = sum(sum(nearpixel))/sum(nearpixel~=0);
+                        nearpixel = zeros(8,1);
+                    end
+                end
+            end
+        end
+    end
+
+    img=img+imgsample;
+
+end
