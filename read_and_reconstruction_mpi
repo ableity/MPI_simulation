@@ -1,0 +1,204 @@
+clc
+clear
+close all
+
+%%
+%二维MPI数据重建
+%适用于20220701示波器采集的第一版数据
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%  参数定义  %%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 二维MPI数据
+% 零磁场点初始中心处的点状仿体
+% 采集频率，单位Hz
+SampleRate=2.5e6;
+
+% 激励频率，单位Hz
+ExciteRate=30e3;
+% 接收信号文件
+Signalpath = "C4--s1-1--00000.csv";
+
+% X轴驱动频率，单位Hz
+DriveRateX = 5;
+% X电流文件
+Xpath = "C3--s1-1--00000.csv";
+
+% Y轴驱动频率，单位Hz
+DriveRateY = 0.5;
+% Y电流文件
+Ypath = "C2--s1-1--00000.csv";
+
+%处理信号时合并的周期数
+BinNum = 10;
+
+%使用几次谐波作为信号强度的代表值
+Use_harmonic = 1;
+
+%重建图像像素数
+PixelNum = 50;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+%在同级目录下创建文件夹savesignalasmat将文件原始数据存入，优化下次打开速度
+if ~exist('savesignalasmat','dir')
+    Signal=csvread(Signalpath,5,0);
+    DriveCurrent_x=csvread(Xpath,5,0);
+    DriveCurrent_y=csvread(Ypath,5,0);
+    mkdir savesignalasmat
+    save(".\savesignalasmat\Signal.mat","Signal")
+    save(".\savesignalasmat\DriveCurrent_x.mat","DriveCurrent_x")
+    save(".\savesignalasmat\DriveCurrent_y.mat","DriveCurrent_y")
+else
+    if ~exist('.\savesignalasmat\Signal.mat','file')
+        Signal=csvread(Signalpath,5,0);
+        save(".\savesignalasmat\Signal.mat","Signal")
+    else
+        load(".\savesignalasmat\Signal.mat")
+    end
+
+    if ~exist('.\savesignalasmat\DriveCurrent_x.mat','file')
+        DriveCurrent_x=csvread(Xpath,5,0);
+        save(".\savesignalasmat\DriveCurrent_x.mat","DriveCurrent_x")
+    else
+        load(".\savesignalasmat\DriveCurrent_x.mat")
+    end
+
+    if ~exist('.\savesignalasmat\DriveCurrent_y.mat','file')
+        DriveCurrent_y=csvread(Ypath,5,0);
+        save(".\savesignalasmat\DriveCurrent_y.mat","DriveCurrent_y")
+    else
+        load(".\savesignalasmat\DriveCurrent_y.mat")
+    end
+
+end
+
+
+
+%数据显示
+figure
+subplot(3,1,1)
+plot(Signal(:,2))
+title("信号数据")
+
+subplot(3,1,2)
+plot(DriveCurrent_x(:,2))
+title("X向电流")
+
+subplot(3,1,3)
+plot(DriveCurrent_y(:,2))
+title("Y向电流")
+
+
+%从二通道信号提取
+Signal = Signal(:,2);
+
+%从采样率与激励频率获取一个周期的采样点个数
+SamplePoint = floor(SampleRate/ExciteRate);
+
+%截取信号，让信号长度是SamplePoint和BinNum的整数倍
+Signal = Signal(1:BinNum*SamplePoint*floor(size(Signal)/(BinNum*SamplePoint)));
+%将信号重排，使其一列数为BinNum*SamplePoint，为后面FFT做预处理
+Signal_reshape = reshape(Signal,BinNum*SamplePoint,[]);
+%FFT
+Signal_FDomin = fft(Signal_reshape);
+%取幅值，归一化
+Signal_FDomin = abs(Signal_FDomin/(BinNum*SamplePoint));
+%讲第Use_harmonic次谐波拿出来作为信号强度的代表值
+SignalStrength = Signal_FDomin(1+BinNum*Use_harmonic,:);
+
+%取整数，同上
+Hx = DriveCurrent_x(1:floor(size(DriveCurrent_x,1)/(BinNum*SamplePoint))*BinNum*SamplePoint,2);
+Hy = DriveCurrent_y(1:floor(size(DriveCurrent_y,1)/(BinNum*SamplePoint))*BinNum*SamplePoint,2);
+
+%下采样预处理
+Hx = reshape(Hx,BinNum*SamplePoint,[]);
+Hy = reshape(Hy,BinNum*SamplePoint,[]);
+%取均值，并下采样
+Hx = mean(Hx);
+Hy = mean(Hy);
+
+figure
+plot(Hx)
+hold on
+plot(Hy)
+hold on
+plot(SignalStrength)
+hold on
+plot(zeros(size(SignalStrength)))
+legend("X向磁场（电流）","Y向磁场（电流）","信号强度")
+
+
+%将轨迹合理的缩放平移到PixelNum*PixelNum的网格上
+Hx = Hx+max(max(Hx))+max(max(Hx))/0.9*0.1;
+Hx = Hx/(max(max(Hx))-min(min(Hx)))*PixelNum*0.9;
+
+
+Hy = Hy+max(max(Hy))+max(max(Hy))/0.9*0.1;
+Hy = Hy/(max(max(Hy))-min(min(Hy)))*PixelNum*0.9;
+
+
+figure
+plot(Hx,Hy)
+title("FFP移动轨迹")
+
+%重建图像预定义
+img = zeros(PixelNum,PixelNum);
+%经过的次数
+addnum = zeros(PixelNum,PixelNum);
+x = floor(Hx);
+y = floor(Hy);
+x(x==0)=1;
+y(y==0)=1;
+for i = 1:size(SignalStrength,2)
+    img(x(i),y(i))=img(x(i),y(i))+SignalStrength(i);
+    addnum(x(i),y(i)) = addnum(x(i),y(i))+1;
+end
+
+addnum(addnum==0)=1;
+img = img./addnum;
+
+img = rot90(img,3);
+figure
+imagesc(img)
+colorbar()
+axis("off")
+title("重建图像")
+
+
+img = Upsimpleimage(img);
+
+
+
+
+figure
+imagesc(img)
+colorbar()
+axis("off")
+title("重建图像插值")
+
+
+
+
